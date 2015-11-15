@@ -51,15 +51,17 @@ public class Query {
     
     private String _rent_count_sql = "Select Count(*) from rentals where cid = ?";
     
-    private String _plan_sql = "Select plan from person where cid = ?";
+    private String _plan_sql = "Select planID from person where cid = ?";
     
-    private String _plan_details_sql = "Select * from plans where planName = ?";
+    private String _plan_details_sql = "Select * from plans where pid = ?";
     
     private String _plan_list_sql = "Select * from plans";
     
     private String _current_rent_list_sql = "Select * "
     		 + "from movie m, rentals r "
     		 + "where r.cid=? and r.movieId = m.id";
+    
+    private String _valid_movie_sql = "Select * from movie where id = ?";
     				 
     private PreparedStatement _director_mid_statement;
     private PreparedStatement _actor_mid_statement;
@@ -71,6 +73,7 @@ public class Query {
     private PreparedStatement _movie_director_statement;
     private PreparedStatement _plan_list_statement;
     private PreparedStatement _current_rent_list_sql_statement;
+    private PreparedStatement _valid_movie_statement;
 
     
     private String currentUser;
@@ -149,6 +152,7 @@ public class Query {
         _rent_count_statement = _customer_db.prepareStatement(_rent_count_sql);
         _plan_statement = _customer_db.prepareStatement(_plan_sql);
         _plan_details_statement = _customer_db.prepareStatement(_plan_details_sql);
+        _valid_movie_statement = _customer_db.prepareStatement(_valid_movie_sql);
         
     }
 
@@ -167,15 +171,15 @@ public class Query {
     	
     	/* Find plan details from the given plan name. */
     	if(plan.next())
-    		_plan_details_statement.setString(1, plan.getString(1));
+    		_plan_details_statement.setInt(1, plan.getInt(1));
     	else
-    		_plan_details_statement.setString(1, "valuePlan");
+    		_plan_details_statement.setInt(1, 1);
     	
     	/* Get the plan in user's max rental count. */
     	ResultSet details = _plan_details_statement.executeQuery();
     	int rentalsLeft = 0;
     	if(details.next())
-    		rentalsLeft = details.getInt(3);
+    		rentalsLeft = details.getInt(4);
     	
     	/* Get the amount of currently rented movies. */
     	_rent_count_statement.clearParameters();
@@ -184,6 +188,9 @@ public class Query {
     	
     	if(count_set.next())
     		rentalsLeft -= count_set.getInt(1);
+    	plan.close();
+    	details.close();
+    	count_set.close();
         return (rentalsLeft);
     }
 
@@ -200,7 +207,14 @@ public class Query {
 
     public boolean helper_check_movie(int mid) throws Exception {
         /* is mid a valid movie id ? you have to figure out  */
-        return true;
+    	_valid_movie_statement.clearParameters();
+    	_valid_movie_statement.setInt(1,mid);
+    	ResultSet movie_set = _valid_movie_statement.executeQuery();
+    	if (movie_set.next())
+    	{
+    		return true;
+    	}
+        return false;
     }
 
     private int helper_who_has_this_movie(int mid) throws Exception {
@@ -239,15 +253,15 @@ public class Query {
     	
     	/* Find plan details from the given plan name. */
     	if(plan.next())
-    		_plan_details_statement.setString(1, plan.getString(1));
+    		_plan_details_statement.setInt(1, plan.getInt(1));
     	else
-    		_plan_details_statement.setString(1, "valuePlan");
+    		_plan_details_statement.setInt(1, 1);
     	
-    	/* Get the plan in use's max rental count. */
+    	/* Get the plan in user's max rental count. */
     	ResultSet details = _plan_details_statement.executeQuery();
     	int rentalsLeft = 0;
     	if(details.next())
-    		rentalsLeft = details.getInt(3);
+    		rentalsLeft = details.getInt(4);
     	
     	/* Get the amount of currently rented movies. */
     	_rent_count_statement.clearParameters();
@@ -343,8 +357,8 @@ public class Query {
     	ResultSet plan_list_set = _plan_list_statement.executeQuery();
     	
     	while(plan_list_set.next()){
-    		System.out.println("\t\tPlan name: "+plan_list_set.getString(1) + ", Price: " + plan_list_set.getString(2) +
-    				", Maximum rental: " + plan_list_set.getString(3));
+    		System.out.println("\t\tPlan ID: "+ plan_list_set.getString(1) + ", Plan name: "+plan_list_set.getString(2) + ", Price: " + plan_list_set.getString(3) +
+    				", Maximum rental: " + plan_list_set.getString(4));
     	}
     	plan_list_set.close();
     	_customer_db.commit();
