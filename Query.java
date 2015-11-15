@@ -149,8 +149,7 @@ public class Query {
         _rent_count_statement = _customer_db.prepareStatement(_rent_count_sql);
         _plan_statement = _customer_db.prepareStatement(_plan_sql);
         _plan_details_statement = _customer_db.prepareStatement(_plan_details_sql);
-        _plan_list_statement = _customer_db.prepareStatement(_plan_list_sql);
-        _current_rent_list_sql_statement = _customer_db.prepareStatement(_current_rent_list_sql);
+        
     }
 
 
@@ -337,6 +336,10 @@ public class Query {
 
     public void transaction_list_plans() throws Exception {
         /* println all available plans: SELECT * FROM plan */
+    	_customer_db.setAutoCommit(false);
+    	_customer_db.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+    	
+    	_plan_list_statement = _customer_db.prepareStatement(_plan_list_sql);
     	ResultSet plan_list_set = _plan_list_statement.executeQuery();
     	
     	while(plan_list_set.next()){
@@ -344,10 +347,16 @@ public class Query {
     				", Maximum rental: " + plan_list_set.getString(3));
     	}
     	plan_list_set.close();
+    	_customer_db.commit();
+    	_customer_db.setAutoCommit(true);  // default value
     }
 
     public void transaction_list_user_rentals(int cid) throws Exception {
         /* println all movies rented by the current user*/
+    	_customer_db.setAutoCommit(false);
+    	_customer_db.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+    	
+    	_current_rent_list_sql_statement = _customer_db.prepareStatement(_current_rent_list_sql);    	
     	_current_rent_list_sql_statement.clearParameters();
     	_current_rent_list_sql_statement .setInt(1,currentUser_ID);
     	ResultSet currentRent_set = _current_rent_list_sql_statement.executeQuery();
@@ -357,6 +366,8 @@ public class Query {
     		System.out.println("\t\tMovie name:     " + currentRent_set.getString(2));
     	}
     	currentRent_set.close();
+    	_customer_db.commit();
+    	_customer_db.setAutoCommit(true);  // default value
     }
 
     public void transaction_rent(int cid, int mid) throws Exception {
